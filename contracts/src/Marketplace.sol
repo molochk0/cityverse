@@ -1,26 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {Escrow} from "./Escrow.sol";
 import {Place} from "./Place.sol";
-import {CityToken} from "./CityToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @title Marketplace — купля-продажа мест за $CITY
 /// @notice Продавец выставляет место (NFT уходит в escrow на этот контракт). Покупатель платит
 ///         $CITY → получает NFT, продавец получает $CITY. Продавец может снять листинг и забрать NFT.
-contract Marketplace is IERC721Receiver, ReentrancyGuard {
+contract Marketplace is Escrow {
     using SafeERC20 for IERC20;
 
     struct Listing {
         address seller;
         uint256 price;
     }
-
-    Place public immutable place;
-    IERC20 public immutable city;
 
     mapping(uint256 tokenId => Listing) public listings;
 
@@ -33,10 +28,7 @@ contract Marketplace is IERC721Receiver, ReentrancyGuard {
     error NotListed(uint256 tokenId);
     error NotSeller(uint256 tokenId, address caller);
 
-    constructor(Place place_, CityToken city_) {
-        place = place_;
-        city = city_;
-    }
+    constructor(Place place_, IERC20 city_) Escrow(place_, city_) {}
 
     /// @notice Выставить место на продажу. Требует предварительного approve этого контракта на NFT.
     function list(uint256 tokenId, uint256 price) external {
@@ -72,10 +64,5 @@ contract Marketplace is IERC721Receiver, ReentrancyGuard {
         place.safeTransferFrom(address(this), msg.sender, tokenId);
 
         emit Cancelled(tokenId, msg.sender);
-    }
-
-    /// @dev Нужно, чтобы контракт мог принимать NFT через safeTransferFrom.
-    function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
-        return IERC721Receiver.onERC721Received.selector;
     }
 }
