@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {Escrow} from "./Escrow.sol";
 import {Place} from "./Place.sol";
-import {CityToken} from "./CityToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @title Harberger — принудительный выкуп мест по самооценке (Harberger Tax)
 /// @notice Владелец регистрирует место: NFT уходит в escrow, владелец сам назначает цену (price)
 ///         и кладёт депозит $CITY на налог. Налог (доля от price в год) непрерывно списывается
 ///         из депозита в казну. Пока депозит цел — любой может выкупить место за price. Если депозит
 ///         исчерпан, место в дефолте и выкупается за 0 — это и есть «плати налог или потеряешь».
-contract Harberger is IERC721Receiver, ReentrancyGuard {
+contract Harberger is Escrow {
     using SafeERC20 for IERC20;
 
     struct Parcel {
@@ -26,8 +24,6 @@ contract Harberger is IERC721Receiver, ReentrancyGuard {
     uint256 internal constant BPS = 10_000;
     uint256 internal constant YEAR = 365 days;
 
-    Place public immutable place;
-    IERC20 public immutable city;
     address public immutable treasury; // получатель собранного налога
     uint256 public immutable taxRateBps; // годовая ставка налога в basis points (1000 = 10%/год)
 
@@ -47,9 +43,7 @@ contract Harberger is IERC721Receiver, ReentrancyGuard {
     error NotParcelOwner(uint256 tokenId, address caller);
     error InDefault(uint256 tokenId);
 
-    constructor(Place place_, CityToken city_, address treasury_, uint256 taxRateBps_) {
-        place = place_;
-        city = city_;
+    constructor(Place place_, IERC20 city_, address treasury_, uint256 taxRateBps_) Escrow(place_, city_) {
         treasury = treasury_;
         taxRateBps = taxRateBps_;
     }
@@ -160,10 +154,6 @@ contract Harberger is IERC721Receiver, ReentrancyGuard {
         if (refund > 0) city.safeTransfer(msg.sender, refund);
 
         emit Withdrawn(tokenId, msg.sender);
-    }
-
-    function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
-        return IERC721Receiver.onERC721Received.selector;
     }
 
     function _settle(uint256 tokenId) internal {
