@@ -44,7 +44,7 @@ git submodule update --init --recursive   # тянет forge-std в contracts/li
 curl -L https://foundry.paradigm.xyz | bash && foundryup
 
 forge build --root contracts   # компиляция
-forge test  --root contracts   # тесты (44 passed)
+forge test  --root contracts   # тесты (48 passed)
 
 # симуляция полного деплоя + связки ролей + сидинга (без кошелька, в локальной EVM):
 forge script contracts/script/Deploy.s.sol:Deploy --root contracts

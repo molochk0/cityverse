@@ -38,6 +38,7 @@ contract Deploy is Script {
         // Связи между контрактами:
         d.city.grantRole(d.city.MINTER_ROLE(), address(d.vault)); // vault печатает награды $CITY
         d.place.grantRole(d.place.MINTER_ROLE(), deployer); // deployer сеет места
+        d.place.setYieldHook(d.vault); // Place настилает доход при трансфере (до сидинга — клок с минта)
 
         _seed(d.place, deployer);
 
