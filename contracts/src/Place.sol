@@ -3,12 +3,14 @@ pragma solidity ^0.8.20;
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /// @title Place — место города как NFT (ERC-721)
 /// @notice Один токен = одно реальное место. Категория задаёт будущий yield; название,
 ///         координаты и картинка хранятся off-chain и доступны по tokenURI.
-contract Place is ERC721URIStorage, Ownable {
+contract Place is ERC721URIStorage, AccessControl {
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+
     // Кальянные → Food, парки → Park. Порядок фиксирован: это часть on-chain состояния.
     enum Category {
         Landmark,
@@ -29,14 +31,15 @@ contract Place is ERC721URIStorage, Ownable {
 
     error MaxSupplyReached(uint256 maxSupply);
 
-    constructor(uint256 maxSupply_) ERC721("Cityverse Place", "PLACE") Ownable(msg.sender) {
+    // admin получает DEFAULT_ADMIN_ROLE и дальше сам выдаёт MINTER (сидеру, в будущем — sale-контракту).
+    constructor(uint256 maxSupply_, address admin) ERC721("Cityverse Place", "PLACE") {
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
         maxSupply = maxSupply_;
     }
 
-    // onlyOwner — временно на Фазу 1; в Фазе 2 заменим на роль MINTER (AccessControl).
     function mint(address to, Category category, string calldata uri)
         external
-        onlyOwner
+        onlyRole(MINTER_ROLE)
         returns (uint256 tokenId)
     {
         if (totalMinted >= maxSupply) revert MaxSupplyReached(maxSupply);
@@ -49,5 +52,15 @@ contract Place is ERC721URIStorage, Ownable {
         _setTokenURI(tokenId, uri);
 
         emit PlaceMinted(tokenId, to, category, uri);
+    }
+
+    // ERC721URIStorage и AccessControl оба объявляют supportsInterface — объединяем их реализации.
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721URIStorage, AccessControl)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
     }
 }
