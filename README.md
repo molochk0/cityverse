@@ -4,7 +4,8 @@
 ими можно владеть, они пассивно приносят внутриигровую валюту, и любое место можно перекупить
 силой по механике Harberger Tax.
 
-> Статус: **Фаза 0 — подготовка.** Контрактов и фронта пока нет, поднимаем скелет.
+> Статус: **Фаза 0 — каркас готов.** Развёрнут Foundry-проект (`contracts/`) с дефолтным
+> `Counter`-контрактом и проходящими тестами. Фронта пока нет.
 
 ## Что это
 
@@ -28,6 +29,22 @@ signer/       # Node-сервис для чек-инов (v2)
 ## Стек
 
 Solidity · Foundry · OpenZeppelin · Base Sepolia (тестнет) · Next.js · wagmi/viem · IPFS
+
+## Контракты (Foundry)
+
+Зависимости подключены git-сабмодулями, поэтому после клона их надо подтянуть:
+
+```bash
+git clone https://github.com/molochk0/cityverse.git
+cd cityverse
+git submodule update --init --recursive   # тянет forge-std в contracts/lib
+
+# установить Foundry, если ещё нет:
+curl -L https://foundry.paradigm.xyz | bash && foundryup
+
+forge build --root contracts   # компиляция
+forge test  --root contracts   # тесты (сейчас: 2 passed)
+```
 
 ## Безопасность
 
