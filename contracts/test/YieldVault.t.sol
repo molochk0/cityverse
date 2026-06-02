@@ -23,11 +23,13 @@ contract YieldVaultTest is Test {
 
         place = new Place(10, admin);
         place.grantRole(place.MINTER_ROLE(), admin);
-        place.mint(alice, Place.Category.Park, "ipfs://0");
-        place.mint(bob, Place.Category.Landmark, "ipfs://1");
 
         vault = new YieldVault(place, city);
+        place.setYieldHook(vault); // хук до минта → у мест клок стартует с минта
         city.grantRole(city.MINTER_ROLE(), address(vault)); // vault получает право минтить награды
+
+        place.mint(alice, Place.Category.Park, "ipfs://0");
+        place.mint(bob, Place.Category.Landmark, "ipfs://1");
     }
 
     function test_RatesByCategory() public view {
@@ -85,5 +87,35 @@ contract YieldVaultTest is Test {
     function testFuzz_LinearInTime(uint32 elapsed) public {
         vm.warp(block.timestamp + elapsed);
         assertEq(vault.pendingYield(PARK), 5e18 * uint256(elapsed) / 1 days);
+    }
+
+    /// @dev При трансфере доход настилается уходящему владельцу, а не утекает получателю.
+    function test_TransferSettlesYieldToSender() public {
+        vm.warp(block.timestamp + 1 days);
+
+        vm.prank(alice);
+        place.transferFrom(alice, bob, PARK);
+
+        assertEq(city.balanceOf(alice), 5e18); // Park-доход начислен уходящему alice
+        assertEq(vault.pendingYield(PARK), 0); // клок сброшен на нового владельца
+        assertEq(place.ownerOf(PARK), bob);
+    }
+
+    /// @dev Клок места стартует с минта, а не «задним числом» от запуска экономики.
+    function test_MintStartsClockNotBackdated() public {
+        vm.warp(block.timestamp + 100 days);
+        place.mint(alice, Place.Category.Food, "ipfs://2"); // tokenId 2 на сдвинутом времени
+
+        assertEq(vault.pendingYield(2), 0);
+    }
+
+    function test_OnlyPlaceCanSettle() public {
+        vm.prank(alice);
+        vm.expectRevert(YieldVault.OnlyPlace.selector);
+        vault.settle(PARK, alice);
+    }
+
+    function test_PendingZeroForNonexistent() public view {
+        assertEq(vault.pendingYield(999), 0);
     }
 }

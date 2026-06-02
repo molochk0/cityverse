@@ -33,6 +33,7 @@ contract IntegrationTest is Test {
 
         city.grantRole(city.MINTER_ROLE(), address(vault)); // как в Deploy
         place.grantRole(place.MINTER_ROLE(), admin);
+        place.setYieldHook(vault); // как в Deploy: доход настилается при трансфере
         city.grantRole(city.MINTER_ROLE(), admin); // только для теста: фондируем покупателей
 
         place.mint(alice, Place.Category.Food, "ipfs://0"); // кальянная у alice
