@@ -4,9 +4,9 @@
 ими можно владеть, они пассивно приносят внутриигровую валюту, и любое место можно перекупить
 силой по механике Harberger Tax.
 
-> Статус: **Фаза 4 завершена.** Готовы: `Place` (ERC-721) + seed; `CityToken` ($CITY);
-> `YieldVault` (доход по времени); `Marketplace` (купля-продажа за $CITY); `Harberger`
-> (принудительный выкуп по самооценке + налог). 43 теста. Дальше — фронтенд. Фронта пока нет.
+> Статус: **Контракты MVP готовы + единый деплой.** `Place` (ERC-721); `CityToken` ($CITY);
+> `YieldVault` (доход по времени); `Marketplace` (купля-продажа); `Harberger` (выкуп по самооценке +
+> налог). `Deploy.s.sol` разворачивает и связывает всё + сидит Воронеж. 44 теста. Дальше — фронтенд.
 
 ## Что это
 
@@ -44,10 +44,10 @@ git submodule update --init --recursive   # тянет forge-std в contracts/li
 curl -L https://foundry.paradigm.xyz | bash && foundryup
 
 forge build --root contracts   # компиляция
-forge test  --root contracts   # тесты (Place: 7 passed)
+forge test  --root contracts   # тесты (44 passed)
 
-# симуляция деплоя + сидинга мест Воронежа (без кошелька, в локальной EVM):
-forge script contracts/script/SeedVoronezh.s.sol:SeedVoronezh --root contracts
+# симуляция полного деплоя + связки ролей + сидинга (без кошелька, в локальной EVM):
+forge script contracts/script/Deploy.s.sol:Deploy --root contracts
 ```
 
 ## Безопасность
