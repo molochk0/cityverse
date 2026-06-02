@@ -4,8 +4,9 @@
 ими можно владеть, они пассивно приносят внутриигровую валюту, и любое место можно перекупить
 силой по механике Harberger Tax.
 
-> Статус: **Фаза 0 — каркас готов.** Развёрнут Foundry-проект (`contracts/`) с дефолтным
-> `Counter`-контрактом и проходящими тестами. Фронта пока нет.
+> Статус: **Фаза 1 — `Place` NFT.** В `contracts/` реализован ERC-721 `Place` (категории мест,
+> метаданные, потолок предложения) с тестами. Город — Воронеж; сидинг реальных мест — отдельным PR.
+> Фронта пока нет.
 
 ## Что это
 
@@ -43,7 +44,7 @@ git submodule update --init --recursive   # тянет forge-std в contracts/li
 curl -L https://foundry.paradigm.xyz | bash && foundryup
 
 forge build --root contracts   # компиляция
-forge test  --root contracts   # тесты (сейчас: 2 passed)
+forge test  --root contracts   # тесты (Place: 7 passed)
 ```
 
 ## Безопасность
