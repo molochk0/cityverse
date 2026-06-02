@@ -16,7 +16,9 @@ contract SeedVoronezh is Script {
 
         vm.startBroadcast();
 
-        place = new Place(MAX_SUPPLY);
+        place = new Place(MAX_SUPPLY, deployer);
+        // deployer — admin контракта; выдаём себе MINTER, чтобы засеять места.
+        place.grantRole(place.MINTER_ROLE(), deployer);
 
         string[] memory parks = _parks();
         for (uint256 i = 0; i < parks.length; i++) {

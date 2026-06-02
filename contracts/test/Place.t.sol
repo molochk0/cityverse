@@ -3,21 +3,23 @@ pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
 import {Place} from "../src/Place.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
 contract PlaceTest is Test {
     Place internal place;
 
-    address internal owner = address(this); // деплоер = owner
+    address internal admin = address(this); // деплоер = admin
+    address internal minter = makeAddr("minter");
     address internal alice = makeAddr("alice");
     address internal bob = makeAddr("bob");
 
-    // Локальная копия события для vm.expectEmit.
     event PlaceMinted(uint256 indexed tokenId, address indexed to, Place.Category category, string uri);
 
     function setUp() public {
-        place = new Place(3); // маленький потолок, чтобы проверить лимит
+        place = new Place(3, admin); // маленький потолок для проверки лимита
+        // admin выдаёт себе MINTER, чтобы минтить в большинстве тестов
+        place.grantRole(place.MINTER_ROLE(), admin);
     }
 
     function test_Metadata() public view {
@@ -25,10 +27,10 @@ contract PlaceTest is Test {
         assertEq(place.symbol(), "PLACE");
         assertEq(place.maxSupply(), 3);
         assertEq(place.totalMinted(), 0);
-        assertEq(place.owner(), owner);
+        assertTrue(place.hasRole(place.DEFAULT_ADMIN_ROLE(), admin));
     }
 
-    function test_OwnerCanMint() public {
+    function test_MinterCanMint() public {
         vm.expectEmit(true, true, false, true);
         emit PlaceMinted(0, alice, Place.Category.Park, "ipfs://park0");
 
@@ -53,10 +55,22 @@ contract PlaceTest is Test {
         assertEq(place.totalMinted(), 2);
     }
 
-    function test_NonOwnerCannotMint() public {
+    function test_NonMinterCannotMint() public {
+        bytes32 role = place.MINTER_ROLE();
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, alice));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, alice, role)
+        );
         place.mint(alice, Place.Category.Food, "ipfs://x");
+    }
+
+    function test_GrantedMinterCanMint() public {
+        place.grantRole(place.MINTER_ROLE(), minter);
+
+        vm.prank(minter);
+        place.mint(alice, Place.Category.Park, "ipfs://granted");
+
+        assertEq(place.ownerOf(0), alice);
     }
 
     function test_RevertsWhenMaxSupplyReached() public {
@@ -73,7 +87,6 @@ contract PlaceTest is Test {
         place.tokenURI(99);
     }
 
-    /// @dev Любая валидная категория корректно сохраняется в categoryOf.
     function testFuzz_MintAssignsCategory(uint8 catRaw) public {
         Place.Category cat = Place.Category(bound(catRaw, 0, 3));
         place.mint(alice, cat, "ipfs://fuzz");
