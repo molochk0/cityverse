@@ -4,9 +4,9 @@
 ими можно владеть, они пассивно приносят внутриигровую валюту, и любое место можно перекупить
 силой по механике Harberger Tax.
 
-> Статус: **Фаза 3 — `YieldVault`.** Готовы: `Place` (ERC-721) + seed Воронежа; `CityToken`
-> ($CITY, ERC-20); `YieldVault` — пассивный доход мест в $CITY по времени и `claim()`. Все на
-> едином `AccessControl`. Фронта пока нет.
+> Статус: **Фаза 4 — Marketplace.** Готовы: `Place` (ERC-721) + seed; `CityToken` ($CITY);
+> `YieldVault` (доход по времени); `Marketplace` — купля-продажа мест за $CITY (escrow +
+> ReentrancyGuard). Дальше — forced buyout (Harberger). Фронта пока нет.
 
 ## Что это
 
