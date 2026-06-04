@@ -1,8 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { formatEther } from "viem";
-import { useAccount, useReadContract, useReadContracts } from "wagmi";
+import { useAccount, useReadContract, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { addresses, cityAbi, placeAbi, vaultAbi, CATEGORY_LABELS } from "@/lib/contracts";
 
 function short(addr?: string) {
@@ -14,10 +15,69 @@ function fmt(wei?: bigint) {
   return Number(formatEther(wei)).toFixed(2);
 }
 
+type PlaceInfo = {
+  id: number;
+  owner?: string;
+  cat?: number;
+  pending?: bigint;
+  mine: boolean;
+};
+
+function PlaceCard({ place, onClaimed }: { place: PlaceInfo; onClaimed: () => void }) {
+  const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
+  const { isLoading: confirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  useEffect(() => {
+    if (isSuccess) {
+      onClaimed();
+      reset();
+    }
+  }, [isSuccess, onClaimed, reset]);
+
+  const canClaim = place.mine && place.pending !== undefined && place.pending > 0n;
+
+  return (
+    <div className={place.mine ? "place mine" : "place"}>
+      <div>
+        <span className="place-id">Место #{place.id}</span>
+        <span className={place.mine ? "tag mine" : "tag"}>
+          {place.cat !== undefined ? CATEGORY_LABELS[place.cat] : "—"}
+        </span>
+      </div>
+      <div className="row">
+        <span>Владелец</span>
+        <b>{place.mine ? "ты" : short(place.owner)}</b>
+      </div>
+      <div className="row">
+        <span>Накоплено</span>
+        <b>{fmt(place.pending)} $CITY</b>
+      </div>
+
+      {canClaim && (
+        <button
+          className="btn"
+          disabled={isPending || confirming}
+          onClick={() =>
+            writeContract({
+              address: addresses.vault,
+              abi: vaultAbi,
+              functionName: "claim",
+              args: [BigInt(place.id)],
+            })
+          }
+        >
+          {isPending ? "Подтверди в кошельке…" : confirming ? "Майнится…" : "Забрать доход"}
+        </button>
+      )}
+      {error && <div className="error">{(error as { shortMessage?: string }).shortMessage ?? "Ошибка транзакции"}</div>}
+    </div>
+  );
+}
+
 export default function Home() {
   const { address } = useAccount();
 
-  const { data: balance } = useReadContract({
+  const { data: balance, refetch: refetchBalance } = useReadContract({
     address: addresses.city,
     abi: cityAbi,
     functionName: "balanceOf",
@@ -40,12 +100,17 @@ export default function Home() {
     { address: addresses.vault, abi: vaultAbi, functionName: "pendingYield", args: [BigInt(i)] },
   ]).flat();
 
-  const { data: placeData } = useReadContracts({
+  const { data: placeData, refetch: refetchPlaces } = useReadContracts({
     contracts: calls,
     query: { enabled: count > 0 },
   });
 
-  const places = Array.from({ length: count }, (_, i) => {
+  const refetchAll = () => {
+    refetchPlaces();
+    refetchBalance();
+  };
+
+  const places: PlaceInfo[] = Array.from({ length: count }, (_, i) => {
     const owner = placeData?.[i * 3]?.result as string | undefined;
     const cat = placeData?.[i * 3 + 1]?.result as number | undefined;
     const pending = placeData?.[i * 3 + 2]?.result as bigint | undefined;
@@ -76,22 +141,7 @@ export default function Home() {
       ) : (
         <div className="grid">
           {places.map((p) => (
-            <div key={p.id} className={p.mine ? "place mine" : "place"}>
-              <div>
-                <span className="place-id">Место #{p.id}</span>
-                <span className={p.mine ? "tag mine" : "tag"}>
-                  {p.cat !== undefined ? CATEGORY_LABELS[p.cat] : "—"}
-                </span>
-              </div>
-              <div className="row">
-                <span>Владелец</span>
-                <b>{p.mine ? "ты" : short(p.owner)}</b>
-              </div>
-              <div className="row">
-                <span>Накоплено</span>
-                <b>{fmt(p.pending)} $CITY</b>
-              </div>
-            </div>
+            <PlaceCard key={p.id} place={p} onClaimed={refetchAll} />
           ))}
         </div>
       )}

@@ -111,3 +111,27 @@ h1 {
 .muted {
   color: var(--muted);
 }
+
+.btn {
+  margin-top: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--mine);
+  background: var(--mine);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.error {
+  color: #f85149;
+  font-size: 12px;
+  margin-top: 8px;
+  word-break: break-word;
+}
