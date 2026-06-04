@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { formatEther } from "viem";
-import { useAccount, useReadContract, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { addresses, cityAbi, placeAbi, vaultAbi, CATEGORY_LABELS } from "@/lib/contracts";
+import { formatEther, parseEther } from "viem";
+import { useAccount, useReadContract, useReadContracts, useWriteContract, usePublicClient } from "wagmi";
+import { addresses, cityAbi, placeAbi, vaultAbi, marketAbi, CATEGORY_LABELS } from "@/lib/contracts";
+
+const ZERO = "0x0000000000000000000000000000000000000000";
 
 function short(addr?: string) {
   return addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : "—";
@@ -17,24 +19,60 @@ function fmt(wei?: bigint) {
 
 type PlaceInfo = {
   id: number;
-  owner?: string;
   cat?: number;
   pending?: bigint;
+  listed: boolean;
+  price?: bigint;
+  ownerDisplay?: string; // бенефициарный владелец (продавец, если в листинге)
   mine: boolean;
 };
 
-function PlaceCard({ place, onClaimed }: { place: PlaceInfo; onClaimed: () => void }) {
-  const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
-  const { isLoading: confirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+function PlaceCard({ place, onChanged }: { place: PlaceInfo; onChanged: () => void }) {
+  const { writeContractAsync } = useWriteContract();
+  const publicClient = usePublicClient();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [priceInput, setPriceInput] = useState("10");
 
-  useEffect(() => {
-    if (isSuccess) {
-      onClaimed();
-      reset();
+  async function run(label: string, fn: () => Promise<void>) {
+    setErr(null);
+    setBusy(label);
+    try {
+      await fn();
+      onChanged();
+    } catch (e) {
+      setErr((e as { shortMessage?: string }).shortMessage ?? "Ошибка транзакции");
+    } finally {
+      setBusy(null);
     }
-  }, [isSuccess, onClaimed, reset]);
+  }
 
-  const canClaim = place.mine && place.pending !== undefined && place.pending > 0n;
+  async function send(params: Parameters<typeof writeContractAsync>[0]) {
+    const hash = await writeContractAsync(params);
+    await publicClient!.waitForTransactionReceipt({ hash });
+  }
+
+  const claim = () =>
+    run("Клейм…", () =>
+      send({ address: addresses.vault, abi: vaultAbi, functionName: "claim", args: [BigInt(place.id)] }),
+    );
+
+  const list = () =>
+    run("Approve NFT → листинг…", async () => {
+      await send({ address: addresses.place, abi: placeAbi, functionName: "approve", args: [addresses.market, BigInt(place.id)] });
+      await send({ address: addresses.market, abi: marketAbi, functionName: "list", args: [BigInt(place.id), parseEther(priceInput || "0")] });
+    });
+
+  const buy = () =>
+    run("Approve $CITY → покупка…", async () => {
+      await send({ address: addresses.city, abi: cityAbi, functionName: "approve", args: [addresses.market, place.price!] });
+      await send({ address: addresses.market, abi: marketAbi, functionName: "buy", args: [BigInt(place.id)] });
+    });
+
+  const cancel = () =>
+    run("Снятие с продажи…", () =>
+      send({ address: addresses.market, abi: marketAbi, functionName: "cancel", args: [BigInt(place.id)] }),
+    );
 
   return (
     <div className={place.mine ? "place mine" : "place"}>
@@ -43,33 +81,64 @@ function PlaceCard({ place, onClaimed }: { place: PlaceInfo; onClaimed: () => vo
         <span className={place.mine ? "tag mine" : "tag"}>
           {place.cat !== undefined ? CATEGORY_LABELS[place.cat] : "—"}
         </span>
+        {place.listed && <span className="tag">на продаже</span>}
       </div>
       <div className="row">
         <span>Владелец</span>
-        <b>{place.mine ? "ты" : short(place.owner)}</b>
+        <b>{place.mine ? "ты" : short(place.ownerDisplay)}</b>
       </div>
-      <div className="row">
-        <span>Накоплено</span>
-        <b>{fmt(place.pending)} $CITY</b>
-      </div>
-
-      {canClaim && (
-        <button
-          className="btn"
-          disabled={isPending || confirming}
-          onClick={() =>
-            writeContract({
-              address: addresses.vault,
-              abi: vaultAbi,
-              functionName: "claim",
-              args: [BigInt(place.id)],
-            })
-          }
-        >
-          {isPending ? "Подтверди в кошельке…" : confirming ? "Майнится…" : "Забрать доход"}
-        </button>
+      {place.listed ? (
+        <div className="row">
+          <span>Цена</span>
+          <b>{fmt(place.price)} $CITY</b>
+        </div>
+      ) : (
+        <div className="row">
+          <span>Накоплено</span>
+          <b>{fmt(place.pending)} $CITY</b>
+        </div>
       )}
-      {error && <div className="error">{(error as { shortMessage?: string }).shortMessage ?? "Ошибка транзакции"}</div>}
+
+      {busy ? (
+        <div className="muted" style={{ marginTop: 12, fontSize: 13 }}>
+          {busy}
+        </div>
+      ) : (
+        <div className="actions">
+          {!place.listed && place.mine && (
+            <>
+              {place.pending !== undefined && place.pending > 0n && (
+                <button className="btn" onClick={claim}>
+                  Забрать доход
+                </button>
+              )}
+              <div className="list-row">
+                <input
+                  className="price-input"
+                  value={priceInput}
+                  onChange={(e) => setPriceInput(e.target.value)}
+                  inputMode="decimal"
+                  aria-label="Цена в $CITY"
+                />
+                <button className="btn" onClick={list}>
+                  Продать
+                </button>
+              </div>
+            </>
+          )}
+          {place.listed && place.mine && (
+            <button className="btn" onClick={cancel}>
+              Снять с продажи
+            </button>
+          )}
+          {place.listed && !place.mine && (
+            <button className="btn" onClick={buy}>
+              Купить за {fmt(place.price)} $CITY
+            </button>
+          )}
+        </div>
+      )}
+      {err && <div className="error">{err}</div>}
     </div>
   );
 }
@@ -93,11 +162,12 @@ export default function Home() {
 
   const count = total ? Number(total) : 0;
 
-  // По 3 чтения на место: владелец, категория, накопленный доход. Один multicall.
+  // По 4 чтения на место: владелец NFT, категория, доход, листинг (продавец+цена). Один multicall.
   const calls = Array.from({ length: count }, (_, i) => [
     { address: addresses.place, abi: placeAbi, functionName: "ownerOf", args: [BigInt(i)] },
     { address: addresses.place, abi: placeAbi, functionName: "categoryOf", args: [BigInt(i)] },
     { address: addresses.vault, abi: vaultAbi, functionName: "pendingYield", args: [BigInt(i)] },
+    { address: addresses.market, abi: marketAbi, functionName: "listings", args: [BigInt(i)] },
   ]).flat();
 
   const { data: placeData, refetch: refetchPlaces } = useReadContracts({
@@ -111,11 +181,18 @@ export default function Home() {
   };
 
   const places: PlaceInfo[] = Array.from({ length: count }, (_, i) => {
-    const owner = placeData?.[i * 3]?.result as string | undefined;
-    const cat = placeData?.[i * 3 + 1]?.result as number | undefined;
-    const pending = placeData?.[i * 3 + 2]?.result as bigint | undefined;
-    const mine = Boolean(address && owner && owner.toLowerCase() === address.toLowerCase());
-    return { id: i, owner, cat, pending, mine };
+    const owner = placeData?.[i * 4]?.result as string | undefined;
+    const cat = placeData?.[i * 4 + 1]?.result as number | undefined;
+    const pending = placeData?.[i * 4 + 2]?.result as bigint | undefined;
+    const listing = placeData?.[i * 4 + 3]?.result as readonly [string, bigint] | undefined;
+
+    const listed = Boolean(listing && listing[0] !== ZERO);
+    const seller = listed ? listing![0] : undefined;
+    const price = listed ? listing![1] : undefined;
+    const ownerDisplay = listed ? seller : owner;
+    const mine = Boolean(address && ownerDisplay && ownerDisplay.toLowerCase() === address.toLowerCase());
+
+    return { id: i, cat, pending, listed, price, ownerDisplay, mine };
   });
 
   return (
@@ -141,7 +218,7 @@ export default function Home() {
       ) : (
         <div className="grid">
           {places.map((p) => (
-            <PlaceCard key={p.id} place={p} onClaimed={refetchAll} />
+            <PlaceCard key={p.id} place={p} onChanged={refetchAll} />
           ))}
         </div>
       )}
