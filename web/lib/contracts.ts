@@ -24,6 +24,16 @@ export const placeAbi = [
     inputs: [{ name: "tokenId", type: "uint256" }],
     outputs: [{ type: "uint8" }],
   },
+  {
+    type: "function",
+    name: "approve",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "tokenId", type: "uint256" },
+    ],
+    outputs: [],
+  },
 ] as const;
 
 export const cityAbi = [
@@ -33,6 +43,53 @@ export const cityAbi = [
     stateMutability: "view",
     inputs: [{ name: "account", type: "address" }],
     outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "approve",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ type: "bool" }],
+  },
+] as const;
+
+export const marketAbi = [
+  {
+    type: "function",
+    name: "listings",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [
+      { name: "seller", type: "address" },
+      { name: "price", type: "uint256" },
+    ],
+  },
+  {
+    type: "function",
+    name: "list",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "tokenId", type: "uint256" },
+      { name: "price", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "buy",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "cancel",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [],
   },
 ] as const;
 
