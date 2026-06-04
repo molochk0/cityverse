@@ -29,10 +29,11 @@ forge script contracts/script/Deploy.s.sol:Deploy \
 
 ```bash
 cd web
-cp .env.example .env.local   # projectId-плейсхолдер; для MetaMask/Rabby хватает
 npm install
 npm run dev
 ```
+
+Переменные окружения для локального запуска не нужны (используем injected-кошелёк, без WalletConnect).
 
 Открой http://localhost:3000.
 
