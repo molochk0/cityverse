@@ -44,6 +44,13 @@ export const vaultAbi = [
     inputs: [{ name: "tokenId", type: "uint256" }],
     outputs: [{ type: "uint256" }],
   },
+  {
+    type: "function",
+    name: "claim",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ type: "uint256" }],
+  },
 ] as const;
 
 // Порядок соответствует enum Category в Place.sol.
