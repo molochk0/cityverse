@@ -5,6 +5,7 @@ import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { formatEther, parseEther } from "viem";
 import { useAccount, useReadContract, useReadContracts, useWriteContract, usePublicClient } from "wagmi";
 import { addresses, cityAbi, placeAbi, vaultAbi, marketAbi, harbergerAbi, CATEGORY_LABELS } from "@/lib/contracts";
+import { placeName } from "@/lib/places";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
 
@@ -111,14 +112,18 @@ function PlaceCard({ place, onChanged }: { place: PlaceInfo; onChanged: () => vo
 
   return (
     <div className={place.mine ? "place mine" : "place"}>
-      <div>
-        <span className="place-id">Место #{place.id}</span>
-        <span className={place.mine ? "tag mine" : "tag"}>
-          {place.cat !== undefined ? CATEGORY_LABELS[place.cat] : "—"}
-        </span>
-        {place.mode === "listed" && <span className="tag">на продаже</span>}
-        {place.mode === "harberger" && <span className="tag">Harberger</span>}
-        {place.inDefault && <span className="tag default">дефолт</span>}
+      <div className="place-head">
+        <div className="place-name">
+          {placeName(place.id)} <span className="muted">#{place.id}</span>
+        </div>
+        <div className="tags">
+          <span className={place.mine ? "tag mine" : "tag"}>
+            {place.cat !== undefined ? CATEGORY_LABELS[place.cat] : "—"}
+          </span>
+          {place.mode === "listed" && <span className="tag">на продаже</span>}
+          {place.mode === "harberger" && <span className="tag">Harberger</span>}
+          {place.inDefault && <span className="tag default">дефолт</span>}
+        </div>
       </div>
 
       <div className="row">
