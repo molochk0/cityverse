@@ -1,11 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { formatEther, parseEther } from "viem";
 import { useAccount, useReadContract, useReadContracts, useWriteContract, usePublicClient } from "wagmi";
 import { addresses, cityAbi, placeAbi, vaultAbi, marketAbi, harbergerAbi, CATEGORY_LABELS } from "@/lib/contracts";
 import { placeName } from "@/lib/places";
+
+// Leaflet требует window → грузим карту только на клиенте (без SSR).
+const MapView = dynamic(() => import("./MapView"), { ssr: false });
 
 const ZERO = "0x0000000000000000000000000000000000000000";
 
@@ -334,11 +338,35 @@ export default function Home() {
           Мест не найдено. Запущен ли anvil и задеплоены ли контракты? (см. web/README.md)
         </p>
       ) : (
-        <div className="grid">
-          {places.map((p) => (
-            <PlaceCard key={p.id} place={p} onChanged={refetchAll} />
-          ))}
-        </div>
+        <>
+          <MapView places={places} />
+          <div className="legend">
+            <span>
+              <i style={{ background: "#238636" }} />
+              твоё
+            </span>
+            <span>
+              <i style={{ background: "#2f81f7" }} />в продаже
+            </span>
+            <span>
+              <i style={{ background: "#a371f7" }} />
+              Harberger
+            </span>
+            <span>
+              <i style={{ background: "#f85149" }} />
+              дефолт
+            </span>
+            <span>
+              <i style={{ background: "#8b949e" }} />
+              чужое
+            </span>
+          </div>
+          <div className="grid">
+            {places.map((p) => (
+              <PlaceCard key={p.id} place={p} onChanged={refetchAll} />
+            ))}
+          </div>
+        </>
       )}
     </main>
   );
