@@ -110,5 +110,73 @@ export const vaultAbi = [
   },
 ] as const;
 
+export const harbergerAbi = [
+  {
+    type: "function",
+    name: "parcels",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [
+      { name: "owner", type: "address" },
+      { name: "price", type: "uint256" },
+      { name: "deposit", type: "uint256" },
+      { name: "lastSettled", type: "uint256" },
+    ],
+  },
+  {
+    type: "function",
+    name: "effectivePrice",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "inDefault",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "register",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "tokenId", type: "uint256" },
+      { name: "price", type: "uint256" },
+      { name: "deposit", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "forceBuy",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "tokenId", type: "uint256" },
+      { name: "newPrice", type: "uint256" },
+      { name: "newDeposit", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "addDeposit",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "tokenId", type: "uint256" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "withdraw",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [],
+  },
+] as const;
+
 // Порядок соответствует enum Category в Place.sol.
 export const CATEGORY_LABELS = ["Landmark", "Transit", "Food", "Park"] as const;
