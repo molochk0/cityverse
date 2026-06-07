@@ -4,9 +4,9 @@
 ими можно владеть, они пассивно приносят внутриигровую валюту, и любое место можно перекупить
 силой по механике Harberger Tax.
 
-> Статус: **Контракты MVP готовы + единый деплой.** `Place` (ERC-721); `CityToken` ($CITY);
-> `YieldVault` (доход по времени); `Marketplace` (купля-продажа); `Harberger` (выкуп по самооценке +
-> налог). `Deploy.s.sol` разворачивает и связывает всё + сидит Воронеж. 44 теста. Дальше — фронтенд.
+> Статус: **MVP собран локально.** Контракты (`Place`, `$CITY` `CityToken`, `YieldVault`,
+> `Marketplace`, `Harberger`) + единый `Deploy.s.sol`, 48 тестов. Фронт (`web/`): карта Воронежа +
+> все действия из UI (claim / маркетплейс / Harberger). Дальше — деплой в Base Sepolia (см. [DEPLOY.md](DEPLOY.md)).
 
 ## Что это
 
@@ -49,6 +49,14 @@ forge test  --root contracts   # тесты (48 passed)
 # симуляция полного деплоя + связки ролей + сидинга (без кошелька, в локальной EVM):
 forge script contracts/script/Deploy.s.sol:Deploy --root contracts
 ```
+
+## Фронтенд
+
+Карта Воронежа + действия из UI. Запуск (anvil → Deploy → `npm run dev`) — в [web/README.md](web/README.md).
+
+## Деплой в тестнет
+
+Выкатка в публичную сеть Base Sepolia (через зашифрованный keystore, без приватника в репо) — в [DEPLOY.md](DEPLOY.md).
 
 ## Безопасность
 
